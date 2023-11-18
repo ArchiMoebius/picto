@@ -238,10 +238,12 @@ class Snapshot:
 
             har_data = b""
 
-            if embed_har:
+            if embed_har or include_har:
                 shutil.copyfile(context_options["record_har_path"], str(har_filepath))
-                har_data = har_filepath.read_bytes()
-                har_filepath.unlink(missing_ok=True)
+
+                if embed_har:
+                    har_data = har_filepath.read_bytes()
+                    har_filepath.unlink(missing_ok=True)
 
             img_exif[cls.EXIF_TAG_HAR] = har_data
             img_exif[cls.EXIF_TAG_URL] = bytes(url, "utf8")
