@@ -9,8 +9,11 @@ from typing import Union
 from urllib.parse import urlparse
 
 from PIL import Image as PillowImage
-from playwright.sync_api import Browser, sync_playwright
+from playwright.sync_api import Browser
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import sync_playwright
 from slugify import slugify
+from types import SimpleNamespace
 
 PillowImage.MAX_IMAGE_PIXELS = 933120000
 
@@ -101,6 +104,8 @@ class Snapshot:
         with sync_playwright() as playwright:
             for browser_type in [playwright.chromium]:
                 browser = browser_type.launch()
+            
+            url_config = SimpleNamespace(url="unknown error")
 
             while not stop_event.is_set():
                 try:
@@ -126,9 +131,31 @@ class Snapshot:
                             har_filepath=har_filepath,
                         )
                     )
-                    input_queue.task_done()
+                except KeyboardInterrupt:
+                    break
+                except PlaywrightTimeoutError:
+                    status_queue.put(
+                        SnapshotResult(
+                            url=f"TIMEOUT ERROR: {url_config.url}",
+                            image_filepath=None,
+                            har_filepath=None,
+                        )
+                    )
                 except queue.Empty:
                     continue
+                except Exception as e:
+                    status_queue.put(
+                        SnapshotResult(
+                            url=f"{str(e)}: {url_config.url}",
+                            image_filepath=None,
+                            har_filepath=None,
+                        )
+                    )
+                finally:
+                    try:
+                        input_queue.task_done()
+                    except ValueError:
+                        pass
 
             browser.close()
 

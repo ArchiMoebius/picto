@@ -1,13 +1,12 @@
 import json
-from time import sleep
-import queue
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 import multiprocessing
+import queue
 from pathlib import Path
 
 import typer
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
-from picto.utils import Snapshot, process_bookmark_entry, SnapshotRequest, SnapshotResult
+from picto.utils import Snapshot, SnapshotRequest, SnapshotResult, process_bookmark_entry
 
 
 def take_command(
@@ -134,7 +133,11 @@ def take_command(
                 total -= 1
 
                 progress.update(task_id=processed_task_id, advance=1)
-                image_paths.append(result.image_filepath)
+
+                if result.image_filepath is None:
+                    image_paths.append(f"{result.url}")
+                else:
+                    image_paths.append(result.image_filepath)
 
                 status_queue.task_done()
             except queue.Empty:
