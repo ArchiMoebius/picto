@@ -1,15 +1,18 @@
 import multiprocessing
+import os
+import queue
 import shutil
 from dataclasses import dataclass
-import queue
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Union
+from urllib.parse import urlparse
 
 from PIL import Image as PillowImage
 from playwright.sync_api import Browser, sync_playwright
 from slugify import slugify
 
+PillowImage.MAX_IMAGE_PIXELS = 933120000
 
 @dataclass
 class SnapshotRequest:
@@ -174,9 +177,19 @@ class Snapshot:
             title = title.strip()
 
             if title == "":
-                title = f"{url}-{page.title()}"
+                urlbase = urlparse(url)
+                basepath = basepath.joinpath(urlbase.hostname)
+                basepath.mkdir(parents=True, exist_ok=True)
+                title = f"{urlbase.path}-{page.title()}"
 
-            filename = basepath.joinpath(slugify(title))
+            title = slugify(title)
+
+            namemax = os.pathconf(basepath, 'PC_NAME_MAX')
+
+            if namemax > 0:
+                title = title[0:namemax-5]
+
+            filename = basepath.joinpath(title)
 
             pdf_filepath = filename.with_suffix(".pdf")
             png_filepath = filename.with_suffix(".png")
